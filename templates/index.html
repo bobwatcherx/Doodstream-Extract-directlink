@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Directlink Doodstream</title>
+    <!-- Materialize CSS CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        body {
+            background-color: black;
+            color: white;
+        }
+        .container {
+            margin-top: 40px;
+        }
+        .btn-custom {
+            background-color: #ff4081 !important;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            color: #fff;
+            overflow-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h4 class="center-align">Extract Directlink Doodstream</h4>
+
+    <div class="input-field">
+        <textarea id="textarea" class="materialize-textarea" placeholder="Paste your Dood urls per line. Example : https://dood.li/e/dwdwdwq" style="color: white;"></textarea>
+        <label for="textarea" class="active" style="color: white;">Paste URLs per line Dood ex: https://dood.li/e/enenfjkwe</label>
+        <p id="link-count" style="color: #ff4081;">Links: 0</p>
+    </div>
+
+    <button id="fetch-button" 
+    style="width: 100%" 
+    class="btn btn-custom waves-effect waves-light" onclick="fetchLinks()">Ambil Link</button>
+
+    <p>Total link result: <span id="total-links">0</span></p>
+
+    <button
+    id="copy-button"
+    style="width:100%"
+    class="btn waves waves-effect blue"
+    onclick="copyLinks()">Copy semua</button>
+    
+    <div id="results" class="section"></div>
+</div>
+
+<!-- Materialize JavaScript CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<!-- SweetAlert2 JavaScript CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    let base_web = "https://teradood-ddl-cdn-v2.hunternblz.com/?url="
+
+    const textarea = document.getElementById('textarea');
+    const linkCount = document.getElementById('link-count');
+    const totalLinks = document.getElementById('total-links');
+    const fetchButton = document.getElementById('fetch-button');
+    const copyButton = document.getElementById('copy-button');
+
+    // Update link count as the user types
+    textarea.addEventListener('input', () => {
+        const links = textarea.value.split('\n').filter(link => link.trim() !== '');
+        linkCount.textContent = `Links: ${links.length}`;
+    });
+
+    async function fetchLinks() {
+        const links = textarea.value.split('\n').filter(link => link.trim() !== '');
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = ''; // Clear previous results
+
+        if (links.length === 0) {
+            Swal.fire('Warning', 'Please enter at least one URL.', 'warning');
+            return;
+        }
+
+        // Disable the button while processing
+        fetchButton.disabled = true;
+        fetchButton.textContent = 'Processing...';
+
+        let successCount = 0;
+
+        for (const link of links) {
+            try {
+                const response = await fetch('/fetch-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: link.trim() }),
+                });
+
+                const data = await response.json();
+
+                const resultElement = document.createElement('div');
+                resultElement.className = 'result';
+                
+                // Create a clickable link that opens in a new tab
+                const linkElement = document.createElement('a');
+                linkElement.href = base_web + data.result;
+                linkElement.textContent = base_web + data.result;
+                linkElement.target = '_blank';
+                linkElement.style.color = '#ff4081'; // Custom link color
+                resultElement.appendChild(linkElement);
+
+                resultsDiv.appendChild(resultElement);
+                successCount++;
+            } catch (error) {
+                console.error('Error fetching link:', error);
+            }
+        }
+
+        // Update the total link result count
+        totalLinks.textContent = successCount;
+
+        // Re-enable the button after processing
+        fetchButton.disabled = false;
+        fetchButton.textContent = 'Ambil Link';
+
+        // Show SweetAlert2 notification when done with a 1-second timer
+        Swal.fire({
+            title: 'Selesai di proses bos',
+            text: `${successCount} link(s) fetched successfully!`,
+            icon: 'success',
+            timer: 1000, // 1 second timer
+            showConfirmButton: false, // Hides the confirm button
+        });
+    }
+
+    function copyLinks() {
+        const resultsDiv = document.getElementById('results');
+        const links = resultsDiv.querySelectorAll('.result a');
+        const linkTexts = Array.from(links).map(link => link.href).join('\n');
+        // Copy to clipboard
+        navigator.clipboard.writeText(linkTexts).then(() => {
+            Swal.fire('Copied!', 'All links have been copied to clipboard.', 'success');
+        }).catch(err => {
+            console.error('Failed to copy links: ', err);
+            Swal.fire('Error', 'Failed to copy links.', 'error');
+        });
+    }
+</script>
+
+</body>
+</html>
